@@ -16,6 +16,7 @@ std::vector<unsigned int> BSPLoader::get_indices()
 			// add to the list of indicies based on the meshvert data
 			for (int j = 0; j < face.n_meshverts; ++j)
 			{
+				// meshIndexArray[face.meshIndexOffset + i] += face.vertexOffset;
 				// meshvert list should translate directly into triangles.
 				int vertIndex = face.meshvert + j;
 				int index = face.vertex + file_meshverts[vertIndex].offset;
@@ -67,6 +68,66 @@ void BSPLoader::process_lightmaps()
 		glTexImage2D(GL_TEXTURE_2D, 0, format, 128, 128, 0, format, GL_UNSIGNED_BYTE, file_lightmaps[i].map);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		lightmaps.push_back(map);
+	}
+
+	combine_lightmaps();
+}
+
+void BSPLoader::combine_lightmaps()
+{
+	// get how many lightmaps there are
+	int map_count = file_lightmaps.size();
+	int width = 128 * map_count;
+	long size = width * 128 * 3;
+	ubyte* target = new ubyte[size];
+
+	int targetX = 0;
+	int targetY = 0;
+	for (int i = 0; i < map_count; ++i)
+	{
+		ubyte* source = file_lightmaps[i].map;
+		for (int sourceY = 0; sourceY < 128; ++sourceY) {
+			for (int sourceX = 0; sourceX < 128; ++sourceX) {
+				int from = (sourceY * 128 * 4) + (sourceX * 4); // 4 bytes per pixel (assuming RGBA)
+				int to = ((targetY + sourceY) * 512 * 4) + ((targetX + sourceX) * 4); // same format as source
+
+				for (int channel = 0; channel < 4; ++channel) {
+					target[to + channel] = source[from + channel];
+				}
+			}
+		}
+		targetX += 128;
+	}
+
+	glGenTextures(1, &lmap_id);
+	glBindTexture(GL_TEXTURE_2D, lmap_id);
+	GLenum format = GL_RGB;
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, 128, 0, format, GL_UNSIGNED_BYTE, target);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	update_lm_coords();
+}
+
+void BSPLoader::update_lm_coords()
+{
+	int lm_count = file_lightmaps.size();
+	// loop the faces
+	// for each face, loop the verts
+	// re-scale the lm coord to a new 0 - 1 range based on the lm index, y stays the same.
+	for (int i = 0; i < file_faces.size(); ++i)
+	{
+		face _face = file_faces[i];
+		for (int j = 0; j < _face.n_meshverts; ++j)
+		{
+			// meshIndexArray[face.meshIndexOffset + i] += face.vertexOffset;
+			// meshvert list should translate directly into triangles.
+			int vertIndex = _face.meshvert + j;
+			int index = _face.vertex + file_meshverts[vertIndex].offset;
+			vertex vert = file_vertices[index];
+			float coord = vert.texcoord[1][0];
+			// rescale the coord, multiply by lm index and divide by lm count?
+			coord = (coord * (_face.lm_index + 1)) / (float)lm_count;
+		}
 	}
 }
 

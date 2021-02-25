@@ -235,12 +235,17 @@ public:
 	int get_face_count() const { return file_faces.size(); }
 	std::vector<unsigned int> get_indices();
 	meshvert get_meshvert(int index) const { return file_meshverts[index]; }
+	GLuint get_lm_id() const { return lmap_id; }
 private:
 	void get_lump_position(int index, int& offset, int& length);
 
 	void process_textures();
 	void process_lightmaps();
 
+	void combine_lightmaps();
+	void update_lm_coords();
+
+	GLuint lmap_id;
 	std::vector<LightMap> lightmaps;
 	std::vector<shader> shaders;
 

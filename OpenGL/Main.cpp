@@ -299,26 +299,30 @@ int main()
 
 		// render each face individually - this currently leads to holes in the mesh
 		// but is probably the necessary approach to correctly render lightmaps + textures.
-		for (int i = 0; i < faceCount; ++i)
+		/*for (int i = 0; i < faceCount; ++i)
 		{
 			face _face = loader.get_face(i);
 			if (_face.type == 1 || _face.type == 3)
 			{
 				shader _shader = loader.get_shader(_face.texture);
-				if (!_shader.render || _shader.transparent) continue;
-				if (_face.lm_index < 0) continue;
+				if (!_shader.render || _shader.transparent) continue; // don't render transparent surfaces yet!
+				if (_face.lm_index < 0) continue; // right now, don't try to draw a face if it doesn't have a lightmap associated with it.
 
 				GLuint texId = loader.get_lightmap_tex(_face.lm_index);
 
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, texId);
+				//glDrawElements(GL_TRIANGLES, face.meshIndexCount, GL_UNSIGNED_INT, (void*)(long)(face.meshIndexOffset * sizeof(GLuint)));
 				glDrawElements(GL_TRIANGLES, _face.n_meshverts, GL_UNSIGNED_INT, (void*)(long)(_face.meshvert * sizeof(GLuint)));
 			}
 				
-		}
+		}*/
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, loader.get_lm_id());
 
 		// just draw everything in one fell swoop - all renders correctly, but can't easily do lightmaps this way!
-		//glDrawElements(GL_TRIANGLES, elements.size(), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, elements.size(), GL_UNSIGNED_INT, 0);
 
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, GL_TRUE);
