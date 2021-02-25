@@ -5,6 +5,8 @@
 #include <vector>
 #include <iostream>
 
+
+#include <GL\glew.h>
 #include <glm\glm.hpp>
 
 // Q3 BSP format reference: http://www.mralligator.com/q3/
@@ -75,9 +77,13 @@ struct lightvol
 	ubyte dir[2];
 };
 
+struct LightMap {
+	GLuint id;
+};
+
 struct lightmap
 {
-	ubyte map[128][128][3];
+	ubyte map[128*128*3];
 };
 
 struct face
@@ -184,6 +190,16 @@ struct texture
 	int contents;
 };
 
+struct shader
+{
+	bool transparent;
+	bool solid;
+	bool render;
+
+	std::string name;
+	unsigned char* tex_data;
+};
+
 struct entities
 {
 	char* ents;
@@ -214,11 +230,19 @@ public:
 
 	std::vector<vertex> get_vertex_data() const { return file_vertices; }
 	face get_face(int index) const { return file_faces[index]; }
+	shader get_shader(int index) const { return shaders[index]; }
+	GLuint get_lightmap_tex(int index) const { return lightmaps[index].id; }
 	int get_face_count() const { return file_faces.size(); }
 	std::vector<unsigned int> get_indices();
 	meshvert get_meshvert(int index) const { return file_meshverts[index]; }
 private:
 	void get_lump_position(int index, int& offset, int& length);
+
+	void process_textures();
+	void process_lightmaps();
+
+	std::vector<LightMap> lightmaps;
+	std::vector<shader> shaders;
 
 	template<class T>
 	void read_lump(int index, std::vector<T>& storage, std::ifstream& fs);

@@ -1,4 +1,7 @@
 #define GLEW_STATIC
+
+#include "stb_image.h"
+
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
 #include <glm\glm.hpp>
@@ -177,8 +180,13 @@ int main()
 	glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE,
 		sizeof(vertex), (void*)(10 * sizeof(float)));
 
+	GLint lmAttrib = glGetAttribLocation(shaderProgram, "lmcoord");
+	glVertexAttribPointer(lmAttrib, 2, GL_FLOAT, GL_FALSE,
+		sizeof(vertex), (void*)(5 * sizeof(float)));
+
 	glEnableVertexAttribArray(posAttrib);
 	glEnableVertexAttribArray(colAttrib);
+	glEnableVertexAttribArray(lmAttrib);
 
 	int faceCount = loader.get_face_count();
 
@@ -294,8 +302,19 @@ int main()
 		for (int i = 0; i < faceCount; ++i)
 		{
 			face _face = loader.get_face(i);
-			if(_face.type == 1 || _face.type == 3)
+			if (_face.type == 1 || _face.type == 3)
+			{
+				shader _shader = loader.get_shader(_face.texture);
+				if (!_shader.render || _shader.transparent) continue;
+				if (_face.lm_index < 0) continue;
+
+				GLuint texId = loader.get_lightmap_tex(_face.lm_index);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, texId);
 				glDrawElements(GL_TRIANGLES, _face.n_meshverts, GL_UNSIGNED_INT, (void*)(long)(_face.meshvert * sizeof(GLuint)));
+			}
+				
 		}
 
 		// just draw everything in one fell swoop - all renders correctly, but can't easily do lightmaps this way!

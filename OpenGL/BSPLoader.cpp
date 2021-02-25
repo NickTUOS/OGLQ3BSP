@@ -1,4 +1,5 @@
 #include "BSPLoader.h"
+#include "stb_image.h"
 
 std::vector<unsigned int> BSPLoader::get_indices()
 {
@@ -30,6 +31,43 @@ void BSPLoader::get_lump_position(int index, int& offset, int& length)
 {
 	offset = file_directory.direntries[index].offset;
 	length = file_directory.direntries[index].length;
+}
+
+void BSPLoader::process_textures()
+{
+	for (int i = 0; i < file_textures.size(); i++)
+	{
+		texture texture = file_textures[i];
+		shader _shader;
+		_shader.render = true;
+		_shader.solid = true;
+		_shader.transparent = false;
+		_shader.name = file_textures[i].name;
+		if (texture.flags & SURF_NONSOLID) _shader.solid = false;
+		if (texture.contents & CONTENTS_PLAYERCLIP) _shader.solid = true;
+		if (texture.contents & CONTENTS_TRANSLUCENT) _shader.transparent = true;
+		if (texture.contents & CONTENTS_LAVA  || texture.contents & CONTENTS_WATER ||
+			texture.contents & CONTENTS_SLIME || texture.contents & CONTENTS_FOG )
+				_shader.render = false;
+		if (_shader.name == "noshader") _shader.render = false;
+
+		shaders.push_back(_shader);
+	}
+}
+
+void BSPLoader::process_lightmaps()
+{
+	for (int i = 0; i < file_lightmaps.size(); ++i)
+	{
+		const int size = (128 * 128 * 3);
+		LightMap map;
+		glGenTextures(1, &map.id);
+		glBindTexture(GL_TEXTURE_2D, map.id);
+		GLenum format = GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, format, 128, 128, 0, format, GL_UNSIGNED_BYTE, file_lightmaps[i].map);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		lightmaps.push_back(map);
+	}
 }
 
 void BSPLoader::load_file()
@@ -76,5 +114,8 @@ void BSPLoader::load_file()
 	file_visdata.vecs.resize(sz);
 	fs.read((char*)&file_visdata.vecs[0], sz);
 	fs.close();
+
+	process_textures();
+	process_lightmaps();
 }
 
