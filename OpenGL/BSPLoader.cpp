@@ -82,16 +82,16 @@ void BSPLoader::combine_lightmaps()
 	ubyte* target = new ubyte[size];
 
 	int targetX = 0;
-	int targetY = 0;
 	for (int i = 0; i < map_count; ++i)
 	{
 		ubyte* source = file_lightmaps[i].map;
+
 		for (int sourceY = 0; sourceY < 128; ++sourceY) {
 			for (int sourceX = 0; sourceX < 128; ++sourceX) {
-				int from = (sourceY * 128 * 4) + (sourceX * 4); // 4 bytes per pixel (assuming RGBA)
-				int to = ((targetY + sourceY) * 512 * 4) + ((targetX + sourceX) * 4); // same format as source
+				int from = (sourceY * 128 * 3) + (sourceX * 3); // 3 bytes per pixel (assuming RGB)
+				int to = ((sourceY) * width * 3) + ((targetX + sourceX) * 3); // same format as source
 
-				for (int channel = 0; channel < 4; ++channel) {
+				for (int channel = 0; channel < 3; ++channel) {
 					target[to + channel] = source[from + channel];
 				}
 			}
@@ -125,8 +125,22 @@ void BSPLoader::update_lm_coords()
 			int index = _face.vertex + file_meshverts[vertIndex].offset;
 			vertex vert = file_vertices[index];
 			float coord = vert.texcoord[1][0];
-			// rescale the coord, multiply by lm index and divide by lm count?
-			coord = (coord * (_face.lm_index + 1)) / (float)lm_count;
+
+			// lightmap index = 1
+			// coord * 2
+			
+			// lightmap width
+			float lmwidth = 128 * file_lightmaps.size();
+			float startx = 128 * _face.lm_index;
+			float endx = 128 + (128 * _face.lm_index);
+
+			float OldRange = (1.0f - 0.0f);
+			float NewRange = (file_lightmaps.size() - 0.0f);
+			float NewValue = (((coord - 0.0f) * NewRange) / OldRange) + 0.0f;
+
+			coord = NewValue / _face.lm_index;
+
+			vert.texcoord[1][0] = coord;
 		}
 	}
 }
