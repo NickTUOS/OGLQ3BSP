@@ -4,15 +4,18 @@ std::vector<unsigned int> BSPLoader::get_indices()
 {
 	std::vector<unsigned int> indices;
 
+	// loop all the faces
 	for (int i = 0; i < file_faces.size(); ++i)
 	{
 		auto face = get_face(i);
 
+		// only handle polygon + mesh types at the moment, not patches or billboards.
 		if (face.type == 1 || face.type == 3)
 		{
-			int vert = face.vertex;
+			// add to the list of indicies based on the meshvert data
 			for (int j = 0; j < face.n_meshverts; ++j)
 			{
+				// meshvert list should translate directly into triangles.
 				int vertIndex = face.meshvert + j;
 				int index = face.vertex + file_meshverts[vertIndex].offset;
 				indices.push_back(index);
@@ -29,7 +32,7 @@ void BSPLoader::get_lump_position(int index, int& offset, int& length)
 	length = file_directory.direntries[index].length;
 }
 
-void BSPLoader::load_directory()
+void BSPLoader::load_file()
 {
 	// open saved file for reading as binary
 	std::ifstream fs{ file, std::fstream::in | std::fstream::binary };
@@ -37,6 +40,7 @@ void BSPLoader::load_directory()
 	// read directory block
 	fs.read( (char*)&file_directory, sizeof(Directory));
 
+	// then read each of the data lumps in "order"
 	get_lump_position(0, offset, length);
 
 	file_entities.ents = new char[length];
@@ -44,6 +48,7 @@ void BSPLoader::load_directory()
 	fs.seekg(offset);
 	fs.read(file_entities.ents, length);
 
+	// 1 to 15 are array based lumps
 	read_lump<texture>(1, file_textures, fs);
 	read_lump<plane>(2, file_planes, fs);
 	read_lump<node>(3, file_nodes, fs);
@@ -60,6 +65,7 @@ void BSPLoader::load_directory()
 	read_lump<lightmap>(14, file_lightmaps, fs);
 	read_lump<lightvol>(15, file_lightvols, fs);
 
+	// 16 is vis data
 	get_lump_position(16, offset, length);
 
 	fs.seekg(offset, std::ios_base::beg);

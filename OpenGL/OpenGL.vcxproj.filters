@@ -78,4 +78,9 @@
       <Filter>Header Files\IMGUI</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders.inc">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

@@ -12,35 +12,9 @@
 
 #include "BSPLoader.h"
 
-const char* vertexSource = R"glsl(
-#version 150 core
+#include "shaders.inc"
 
-in vec3 position;
-in vec4 colour;
-
-out vec4 Colour;
-
-uniform mat4 view;
-uniform mat4 proj;
-uniform mat4 model;
-
-void main()
-{
-	Colour = colour;
-    gl_Position = proj * view * model * vec4(position, 1.0);
-})glsl";
-
-const char* fragmentSource = R"glsl(#version 150 core
-
-in vec4 Colour;
-
-out vec4 outColor;
-
-void main()
-{
-    outColor = Colour;
-}
-)glsl";
+const bool AllowMouse = true;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -129,12 +103,14 @@ int main()
 	glFrontFace(GL_CW);
 	glEnable(GL_DEPTH_TEST);
 
-	bool show_demo_window = true;
-	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+	// needs a valid Q3A BSP file.
 	BSPLoader loader{ "Data\\q3dm0.bsp" };
+
 	std::vector<vertex> vertices = loader.get_vertex_data();
+	
+	// generate and bind array and buffer objects.
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
@@ -151,6 +127,8 @@ int main()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 	auto elements = loader.get_indices();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, elements.size() * sizeof(unsigned int), &elements[0], GL_STATIC_DRAW);
+
+	// load and compile vertex and frag shaders
 
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
@@ -191,6 +169,7 @@ int main()
 
 	glUseProgram(shaderProgram);
 
+	// vert shader attributes - see vertex struct in BSPLoader.h for specifics
 	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
 
@@ -203,8 +182,11 @@ int main()
 
 	int faceCount = loader.get_face_count();
 
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	//glfwSetCursorPosCallback(window, mouse_callback);
+	if (AllowMouse)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPosCallback(window, mouse_callback);
+	}
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -216,6 +198,7 @@ int main()
 
 		processInput(window);
 
+		// IMGui window for printing face info for debugging.
 		{
 			float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 			static int currentFace = 0;
@@ -281,6 +264,7 @@ int main()
 			ImGui::End();
 		}
 
+		// build matrices for view, projection and model
 		glm::mat4 view = glm::lookAt(
 			cameraPos,
 			cameraPos + cameraFront,
@@ -294,6 +278,7 @@ int main()
 		GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
+		// need to rotate the world by -90 in x to line everything up nicely.
 		glm::mat4 model = glm::mat4(1.0);
 		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		GLint modelProj = glGetUniformLocation(shaderProgram, "model");
@@ -304,6 +289,8 @@ int main()
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// render each face individually - this currently leads to holes in the mesh
+		// but is probably the necessary approach to correctly render lightmaps + textures.
 		for (int i = 0; i < faceCount; ++i)
 		{
 			face _face = loader.get_face(i);
@@ -311,8 +298,8 @@ int main()
 				glDrawElements(GL_TRIANGLES, _face.n_meshverts, GL_UNSIGNED_INT, (void*)(long)(_face.meshvert * sizeof(GLuint)));
 		}
 
+		// just draw everything in one fell swoop - all renders correctly, but can't easily do lightmaps this way!
 		//glDrawElements(GL_TRIANGLES, elements.size(), GL_UNSIGNED_INT, 0);
-		//glDrawArrays(GL_POINTS, 0, vertices.size());
 
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, GL_TRUE);
