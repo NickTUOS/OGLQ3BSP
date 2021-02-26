@@ -105,7 +105,8 @@ void BSPLoader::combine_lightmaps()
 	glTexImage2D(GL_TEXTURE_2D, 0, format, width, 128, 0, format, GL_UNSIGNED_BYTE, target);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-	update_lm_coords();
+	if (single_draw)
+		update_lm_coords();
 }
 
 void BSPLoader::update_lm_coords()
@@ -123,24 +124,12 @@ void BSPLoader::update_lm_coords()
 			// meshvert list should translate directly into triangles.
 			int vertIndex = _face.meshvert + j;
 			int index = _face.vertex + file_meshverts[vertIndex].offset;
-			vertex vert = file_vertices[index];
-			float coord = vert.texcoord[1][0];
+			float coord = file_vertices[index].texcoord[1][0];
 
-			// lightmap index = 1
-			// coord * 2
-			
-			// lightmap width
-			float lmwidth = 128 * file_lightmaps.size();
-			float startx = 128 * _face.lm_index;
-			float endx = 128 + (128 * _face.lm_index);
+			// rescale u coord to fit the atlas.
+			coord = (coord + _face.lm_index) / file_lightmaps.size();
 
-			float OldRange = (1.0f - 0.0f);
-			float NewRange = (file_lightmaps.size() - 0.0f);
-			float NewValue = (((coord - 0.0f) * NewRange) / OldRange) + 0.0f;
-
-			coord = NewValue / _face.lm_index;
-
-			vert.texcoord[1][0] = coord;
+			file_vertices[index].texcoord[1][0] = coord;
 		}
 	}
 }

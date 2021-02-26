@@ -223,7 +223,7 @@ struct Directory
 class BSPLoader
 {
 public:
-	BSPLoader(std::string filename) : file{filename}
+	BSPLoader(std::string filename, bool single) : file{filename}, single_draw{single}
 	{
 		load_file();
 	}
@@ -254,6 +254,7 @@ private:
 
 	void load_file();
 	std::string file;
+	bool single_draw;
 
 	int offset, length;
 
